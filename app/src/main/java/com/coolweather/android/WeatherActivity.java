@@ -6,11 +6,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.bumptech.glide.util.Util;
 import com.coolweather.android.gson.Forecast;
 import com.coolweather.android.gson.Weather;
@@ -49,6 +51,8 @@ public class WeatherActivity extends AppCompatActivity {
 
     private TextView sportText;
 
+    private ImageView bingPicImg;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +70,7 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText=(TextView)findViewById(R.id.comfort_text);
         carWashText=(TextView)findViewById(R.id.car_wash_text);
         sportText=(TextView)findViewById(R.id.sport_text);
+        bingPicImg=(ImageView)findViewById(R.id.bing_pic_img);
 
         SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString=prefs.getString("weather",null);
@@ -79,6 +84,13 @@ public class WeatherActivity extends AppCompatActivity {
             //在没数据时隐藏空板，以免突兀
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
+        }
+
+        String bingPic=prefs.getString("bing_pic",null);
+        if(bingPic!=null){
+            Glide.with(this).load(bingPic).into(bingPicImg);
+        }else{
+            loadBingPic();
         }
     }
 
@@ -119,6 +131,7 @@ public class WeatherActivity extends AppCompatActivity {
                 });
             }
         });
+        loadBingPic();//每次加载天气的时候也加载了图片
     }
     /**
      * 处理并展示Weather实体类中的数据
@@ -156,5 +169,32 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * 加载每日一图
+     */
+    private void loadBingPic(){
+        String requestBingPic="http://guolin.tech/api/bing_pic";
+        HttpUtil.sendOkHttpRequest(requestBingPic, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String bingPic=response.body().string();
+                SharedPreferences.Editor editor=PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
+                editor.apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeatherActivity.this).load(bingPic).into(bingPicImg);
+                        //这里Glide直接把bingPic从网上打上去了，功能之强大
+                    }
+                });
+            }
+        });
     }
 }
